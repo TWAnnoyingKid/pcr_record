@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+
+// 引入弧形牙齒視圖
+import 'arc_teeth_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -88,6 +92,7 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
       missingTeeth[toothNum] = false; // 初始化所有牙齒為非缺失
     }
   }
+
   void _showHelpDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -103,7 +108,7 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                 SizedBox(height: 8),
                 Text('2. 長按牙齒可將其標記為缺失牙齒（灰色）'),
                 SizedBox(height: 8),
-                Text('3. 使用雙指可放大或縮小牙齒圖，方便詳細標記'),
+                Text('3. 使用雙指可放大或縮小牙齒圖，左右滑動可查看全部牙齒'),
                 SizedBox(height: 8),
                 Text('4. PCR指數計算時不包含缺失牙齒'),
                 SizedBox(height: 8),
@@ -167,7 +172,7 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                       const Text('提示: 長按牙齒可標記缺失', style: TextStyle(color: Colors.blue, fontSize: 12)),
                       const Spacer(),
                       // 添加提示文字
-                      const Text('可用雙指縮放', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                      const Text('可用雙指縮放並滑動', style: TextStyle(color: Colors.blue, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -177,61 +182,115 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                     margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: InteractiveViewer(
-                        boundaryMargin: const EdgeInsets.all(20.0),
-                        minScale: 0.5,
-                        maxScale: 4.0,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Plaque Control Record',
-                                style: TextStyle(
-                                  fontSize: titleFontSize,
-                                  fontWeight: FontWeight.bold,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Plaque Control Record',
+                            style: TextStyle(
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: constraints.maxHeight * 0.01),
+
+                          // 使用弧形排列的牙齒視圖
+                          Expanded(
+                            child: InteractiveViewer(
+                              boundaryMargin: const EdgeInsets.all(20.0),
+                              minScale: 0.5,
+                              maxScale: 4.0,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Container(
+                                  width: math.max(screenSize.width - horizontalPadding * 2 - 16, 600),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  child: Column(
+                                    children: [
+                                      // 上排牙齒（弧形排列）
+                                      Container(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              '上排牙齒',
+                                              style: TextStyle(
+                                                fontSize: normalFontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blue,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 5),
+                                            ArcTeethView(
+                                              teethNumbers: upperTeethNumbers,
+                                              teethColorStatus: teethColorStatus,
+                                              missingTeeth: missingTeeth,
+                                              isUpper: true,
+                                              height: toothHeight,
+                                              onSectionTap: (tooth, section, value) {
+                                                setState(() {
+                                                  teethColorStatus[tooth]![section] = value;
+                                                });
+                                              },
+                                              onLongPress: (tooth) {
+                                                setState(() {
+                                                  missingTeeth[tooth] = !missingTeeth[tooth]!;
+                                                  if (missingTeeth[tooth]!) {
+                                                    teethColorStatus[tooth] = List.generate(6, (_) => false);
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      // 下排牙齒（弧形排列）
+                                      Container(
+                                        padding: const EdgeInsets.only(top:8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            ArcTeethView(
+                                              teethNumbers: lowerTeethNumbers,
+                                              teethColorStatus: teethColorStatus,
+                                              missingTeeth: missingTeeth,
+                                              isUpper: false,
+                                              height: toothHeight,
+                                              onSectionTap: (tooth, section, value) {
+                                                setState(() {
+                                                  teethColorStatus[tooth]![section] = value;
+                                                });
+                                              },
+                                              onLongPress: (tooth) {
+                                                setState(() {
+                                                  missingTeeth[tooth] = !missingTeeth[tooth]!;
+                                                  if (missingTeeth[tooth]!) {
+                                                    teethColorStatus[tooth] = List.generate(6, (_) => false);
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Text(
+                                              '下排牙齒',
+                                              style: TextStyle(
+                                                fontSize: normalFontSize,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blue,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              SizedBox(height: constraints.maxHeight * 0.01),
-
-                              // 修正：上排牙齒分為右上和左上（修正順序和文字）
-                              _buildTeethRow(
-                                upperTeethNumbers.sublist(0, upperTeethNumbers.length ~/ 2),
-                                isUpper: true,
-                                height: toothHeight,
-                                position: '右上(18-11)',
-                              ),
-
-                              SizedBox(height: constraints.maxHeight * 0.01),
-
-                              _buildTeethRow(
-                                upperTeethNumbers.sublist(upperTeethNumbers.length ~/ 2),
-                                isUpper: true,
-                                height: toothHeight,
-                                position: '左上(21-28)',
-                              ),
-
-                              SizedBox(height: constraints.maxHeight * 0.02),
-
-                              // 修正：下排牙齒分為左下和右下（修正順序和文字）
-                              _buildTeethRow(
-                                lowerTeethNumbers.sublist(lowerTeethNumbers.length ~/ 2),
-                                isUpper: false,
-                                height: toothHeight,
-                                position: '左下(31-38)',
-                              ),
-
-                              SizedBox(height: constraints.maxHeight * 0.01),
-
-                              _buildTeethRow(
-                                lowerTeethNumbers.sublist(0, lowerTeethNumbers.length ~/ 2),
-                                isUpper: false,
-                                height: toothHeight,
-                                position: '右下(48-41)',
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -293,12 +352,12 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                               ),
                               Row(
                                 children: [
-                                  // 右上
+                                  // 左上
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('右上:',
+                                        Text('左上:',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: normalFontSize,
@@ -309,17 +368,17 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                                             teethNumbers: upperTeethNumbers.sublist(0, upperTeethNumbers.length ~/ 2),
                                             fontSize: normalFontSize,
                                             sorted: true,
-                                            descending: true
+                                            descending: false
                                         ),
                                       ],
                                     ),
                                   ),
-                                  // 左上
+                                  // 右上
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('左上:',
+                                        Text('右上:',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: normalFontSize,
@@ -338,7 +397,7 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                                 ],
                               ),
 
-                              const Divider(height: 16),
+                              const Divider(height: 20),
 
                               // 下排(左下+右下)
                               Text(
@@ -350,12 +409,12 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                               ),
                               Row(
                                 children: [
-                                  // 左下
+                                  // 右下
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('左下:',
+                                        Text('右下:',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: normalFontSize,
@@ -371,12 +430,12 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                                       ],
                                     ),
                                   ),
-                                  // 右下
+                                  // 左下
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('右下:',
+                                        Text('左下:',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: normalFontSize,
@@ -387,7 +446,7 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                                             teethNumbers: lowerTeethNumbers.sublist(0, lowerTeethNumbers.length ~/ 2),
                                             fontSize: normalFontSize,
                                             sorted: true,
-                                            descending: true
+                                            descending: false
                                         ),
                                       ],
                                     ),
@@ -423,185 +482,6 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
                 child: const Text('匯出CSV檔案'),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 建立牙齒列
-  Widget _buildTeethRow(List<int> teethNumbers, {required bool isUpper, required double height, required String position}) {
-    // 確保牙齒號碼是按正確順序顯示的
-    final sortedTeethNumbers = List<int>.from(teethNumbers);
-    if (position == '右上(18-11)' || position == '右下(48-41)') {
-      // 右側區域應該是降序排列
-      sortedTeethNumbers.sort((a, b) => b.compareTo(a));
-    } else {
-      // 左側區域應該是升序排列
-      sortedTeethNumbers.sort();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 添加分區標題 (左上/右上/左下/右下)
-        Padding(
-          padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
-          child: Text(
-            position,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 1),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: sortedTeethNumbers.map((toothNum) {
-              return _buildTooth(toothNum, isUpper: isUpper, height: height);
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 建立單顆牙齒
-  Widget _buildTooth(int toothNum, {required bool isUpper, required double height}) {
-    // 取得此牙齒的著色狀態
-    final sections = teethColorStatus[toothNum]!;
-    // 取得此牙齒是否缺失
-    final isMissing = missingTeeth[toothNum]!;
-
-    // 根據牙齒高度動態計算字體大小
-    final fontSize = (height / 10).clamp(7.0, 10.0);
-
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 牙齒編號
-          Text(
-            '$toothNum',
-            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
-          ),
-          // 牙齒繪製 - 使用 GestureDetector 以支持長按功能
-          GestureDetector(
-            onLongPress: () {
-              // 切換牙齒的缺失狀態
-              setState(() {
-                missingTeeth[toothNum] = !isMissing;
-                // 如果標記為缺失，清除該牙齒的所有著色
-                if (missingTeeth[toothNum]!) {
-                  teethColorStatus[toothNum] = List.generate(6, (_) => false);
-                }
-              });
-            },
-            child: Container(
-              height: height,
-              margin: const EdgeInsets.symmetric(horizontal: 1),
-              child: ClipRRect(
-                // 將整個區域裁剪為橢圓形
-                borderRadius: BorderRadius.circular(height / 2),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 1.0),
-                    borderRadius: BorderRadius.circular(height / 2),
-                    // 如果牙齒缺失，顯示為灰色
-                    color: isMissing ? Colors.grey.shade300 : null,
-                  ),
-                  child: isMissing
-                      ? Center(
-                    child: Icon(
-                      Icons.do_not_disturb,
-                      color: Colors.grey.shade700,
-                      size: height / 2,
-                    ),
-                  )
-                      : Column(
-                    children: [
-                      // 牙齒上半部（3個區域）
-                      Expanded(
-                        child: Row(
-                          children: [
-                            _buildToothSection(toothNum, 0, sections[0]),
-                            _buildToothSection(toothNum, 1, sections[1]),
-                            _buildToothSection(toothNum, 2, sections[2]),
-                          ],
-                        ),
-                      ),
-                      // 添加一條水平分隔線
-                      Container(
-                        height: 1,
-                        color: Colors.black,
-                      ),
-                      // 牙齒下半部（3個區域）
-                      Expanded(
-                        child: Row(
-                          children: [
-                            _buildToothSection(toothNum, 3, sections[3]),
-                            _buildToothSection(toothNum, 4, sections[4]),
-                            _buildToothSection(toothNum, 5, sections[5]),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 建立牙齒的單一區塊
-  Widget _buildToothSection(int toothNum, int sectionIndex, bool isColored) {
-    // 檢查牙齒是否標記為缺失
-    if (missingTeeth[toothNum]!) {
-      return Expanded(child: Container()); // 如果牙齒缺失，返回空容器
-    }
-
-    // 根據區塊位置設定邊框
-    Border? border;
-    if (sectionIndex == 0) { // 左上
-      border = Border(right: BorderSide(color: Colors.black, width: 0.5));
-    } else if (sectionIndex == 1) { // 中上
-      border = Border(
-        left: BorderSide(color: Colors.black, width: 0.5),
-        right: BorderSide(color: Colors.black, width: 0.5),
-      );
-    } else if (sectionIndex == 2) { // 右上
-      border = Border(left: BorderSide(color: Colors.black, width: 0.5));
-    } else if (sectionIndex == 3) { // 左下
-      border = Border(right: BorderSide(color: Colors.black, width: 0.5));
-    } else if (sectionIndex == 4) { // 中下
-      border = Border(
-        left: BorderSide(color: Colors.black, width: 0.5),
-        right: BorderSide(color: Colors.black, width: 0.5),
-      );
-    } else if (sectionIndex == 5) { // 右下
-      border = Border(left: BorderSide(color: Colors.black, width: 0.5));
-    }
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            teethColorStatus[toothNum]![sectionIndex] = !isColored;
-          });
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: isColored ? Colors.red : Colors.transparent,
-            border: border,
           ),
         ),
       ),
@@ -712,10 +592,11 @@ class _PCRRecordPageState extends State<PCRRecordPage> {
     setState(() {
       for (var toothNum in teethColorStatus.keys) {
         teethColorStatus[toothNum] = List.generate(6, (_) => false);
+        missingTeeth[toothNum] = false; // 同時清除缺失標記
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已清除所有著色')),
+      const SnackBar(content: Text('已清除所有著色和缺失標記')),
     );
   }
 
